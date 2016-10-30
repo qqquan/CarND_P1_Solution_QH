@@ -160,7 +160,7 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
     return cv2.addWeighted(initial_img, α, img, β, λ)
 
 
-# ## Test on Images
+# ## Test on Images ==> QH: Save to "result_test_images\"
 #
 # Now you should build your pipeline to work on the images in the directory "test_images"
 # **You should make sure your pipeline works well on these images before you try the videos.**
@@ -168,26 +168,44 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
 # In[19]:
 
 
-def Region_GenTriangleVertices(image):
+# @param apex_portion range : 0~1.0 the percentage of relative position of apex, e.g., 0.2 is at 0.2*x
+def Region_GenTriangleVertices(image, apex_x_portion , apex_y_portion):
     img_num_of_row = image.shape[0]
     img_num_of_col = image.shape[1]
-    img_size_x = img_num_of_col  
+    img_size_x = img_num_of_col
     img_size_y = img_num_of_row
 
     tup_botm_right = (img_size_x, img_size_y)
     tup_botm_left = (0,img_size_y)
-    tup_apex = (img_size_x/2, img_size_y/2)
+    tup_apex = (img_size_x*apex_x_portion, img_size_y*apex_y_portion)
 
     vertices = np.array([[tup_botm_left,tup_apex, tup_botm_right]], dtype=np.int32)
 
     return vertices
 
-
 def PROTO_process_image(image):
 
-    vertices = Region_GenTriangleVertices(image)
-    result = region_of_interest(image,vertices)
+    vertices = Region_GenTriangleVertices(image, 0.5, 0.4)
+    img_cropped_region = region_of_interest(image,vertices)
 
+    color_threshold_red = 200
+    color_threshold_green = 200
+    color_threshold_blue = 200
+
+    rgb_threshold = [color_threshold_red, color_threshold_green, color_threshold_blue]
+
+    img_table_pixel_disable =   (img_cropped_region[:,:,0] < rgb_threshold[0] ) | \
+                                (img_cropped_region[:,:,1] < rgb_threshold[1] ) | \
+                                (img_cropped_region[:,:,2] < rgb_threshold[2] )
+
+    img_cropped_region_color= np.copy(img_cropped_region)
+    img_cropped_region_color[img_table_pixel_disable] = [0,0,0] #Boolean or “mask” index arrays
+
+    # mark the targets
+    img_marked_region_color= np.copy(img_cropped_region)
+    img_marked_region_color[~img_table_pixel_disable] = [255,0,0] #Boolean or “mask” index arrays
+
+    result = img_marked_region_color
     return result
 
 
