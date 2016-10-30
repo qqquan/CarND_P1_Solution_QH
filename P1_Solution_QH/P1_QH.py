@@ -169,7 +169,7 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
 
 
 # @param apex_portion range : 0~1.0 the percentage of relative position of apex, e.g., 0.2 is at 0.2*x
-def Region_GenTriangleVertices(image, apex_x_portion , apex_y_portion):
+def QH_Region_GenTriangleVertices(image, apex_x_portion , apex_y_portion):
     img_num_of_row = image.shape[0]
     img_num_of_col = image.shape[1]
     img_size_x = img_num_of_col
@@ -183,14 +183,14 @@ def Region_GenTriangleVertices(image, apex_x_portion , apex_y_portion):
 
     return vertices
 
-def PROTO_process_image(image):
+def QH_process_image_RegionColorFilter(image):
 
-    vertices = Region_GenTriangleVertices(image, 0.5, 0.4)
+    vertices = QH_Region_GenTriangleVertices(image, 0.5, 0.4)
     img_cropped_region = region_of_interest(image,vertices)
 
-    color_threshold_red = 200
-    color_threshold_green = 200
-    color_threshold_blue = 200
+    color_threshold_red = 160
+    color_threshold_green = 160
+    color_threshold_blue = 0
 
     rgb_threshold = [color_threshold_red, color_threshold_green, color_threshold_blue]
 
@@ -205,7 +205,11 @@ def PROTO_process_image(image):
     img_marked_region_color= np.copy(img_cropped_region)
     img_marked_region_color[~img_table_pixel_disable] = [255,0,0] #Boolean or “mask” index arrays
 
-    result = img_marked_region_color
+    # mark the targets on the full image
+    img_marked_color= np.copy(image)
+    img_marked_color[~img_table_pixel_disable] = [255,0,0] #Boolean or “mask” index arrays
+
+    result = img_marked_color
     return result
 
 
@@ -216,7 +220,7 @@ file_list = os.listdir(test_dir)
 
 for file in file_list:
     image = mpimg.imread( test_dir+file)
-    img_processed = PROTO_process_image(image)
+    img_processed = QH_process_image(image)
     mpimg.imsave('result_'+test_dir+'result_'+file, img_processed )
 
 
@@ -246,7 +250,7 @@ def process_image(image):
     # NOTE: The output you return should be a color image (3 channel) for processing video below
     # TODO: put your pipeline here,
     # you should return the final output (image with lines are drawn on lanes)
-    result = image
+    result = QH_process_image_RegionColorFilter(image)
     return result
 
 
