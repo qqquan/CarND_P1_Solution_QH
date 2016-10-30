@@ -183,6 +183,18 @@ def QH_Region_GenTriangleVertices(image, apex_x_portion , apex_y_portion):
 
     return vertices
 
+# @return bool index for numpy array
+def QH_ImageFilter_Color_FindPixelIdx(img, thres_red,thres_green,thres_blue):
+
+  rgb_threshold = [thres_red, thres_green, thres_blue]
+
+  img_table_pixel_disable =   (img[:,:,0] < rgb_threshold[0] ) | \
+                              (img[:,:,1] < rgb_threshold[1] ) | \
+                              (img[:,:,2] < rgb_threshold[2] )
+  
+  return (~img_table_pixel_disable)
+
+
 def QH_process_image_RegionColorFilter(image):
 
     vertices = QH_Region_GenTriangleVertices(image, 0.5, 0.4)
@@ -192,11 +204,9 @@ def QH_process_image_RegionColorFilter(image):
     color_threshold_green = 160
     color_threshold_blue = 0
 
-    rgb_threshold = [color_threshold_red, color_threshold_green, color_threshold_blue]
+    img_target_pixel_index = QH_ImageFilter_Color_FindPixelIdx(img_cropped_region, color_threshold_red, color_threshold_green, color_threshold_blue)
+    img_table_pixel_disable = ~img_target_pixel_index
 
-    img_table_pixel_disable =   (img_cropped_region[:,:,0] < rgb_threshold[0] ) | \
-                                (img_cropped_region[:,:,1] < rgb_threshold[1] ) | \
-                                (img_cropped_region[:,:,2] < rgb_threshold[2] )
 
     img_cropped_region_color= np.copy(img_cropped_region)
     img_cropped_region_color[img_table_pixel_disable] = [0,0,0] #Boolean or “mask” index arrays
@@ -212,7 +222,8 @@ def QH_process_image_RegionColorFilter(image):
     result = img_marked_color
     return result
 
-
+def QH_process_image(image):
+  return QH_process_image_RegionColorFilter(image)
 
 import os
 test_dir = "test_images/"
