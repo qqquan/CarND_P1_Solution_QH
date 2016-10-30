@@ -186,44 +186,86 @@ def QH_Region_GenTriangleVertices(image, apex_x_portion , apex_y_portion):
 # @return bool index for numpy array
 def QH_ImageFilter_Color_FindPixelIdx(img, thres_red,thres_green,thres_blue):
 
-  rgb_threshold = [thres_red, thres_green, thres_blue]
+    rgb_threshold = [thres_red, thres_green, thres_blue]
 
-  img_table_pixel_disable =   (img[:,:,0] < rgb_threshold[0] ) | \
+    img_table_pixel_disable =   (img[:,:,0] < rgb_threshold[0] ) | \
                               (img[:,:,1] < rgb_threshold[1] ) | \
                               (img[:,:,2] < rgb_threshold[2] )
-  
-  return (~img_table_pixel_disable)
+
+    return (~img_table_pixel_disable)
+
+# @return image in numpy array of cropped region
+def QH_ImageFilter_RegionCrop(img):
+    vertices = QH_Region_GenTriangleVertices(img, 0.5, 0.4)
+    img_cropped_region = region_of_interest(img, vertices)
+    return img_cropped_region
 
 
 def QH_process_image_RegionColorFilter(image):
 
-    vertices = QH_Region_GenTriangleVertices(image, 0.5, 0.4)
-    img_cropped_region = region_of_interest(image,vertices)
+
+    img_cropped_region = QH_ImageFilter_RegionCrop(image)
 
     color_threshold_red = 160
     color_threshold_green = 160
     color_threshold_blue = 0
 
     img_target_pixel_index = QH_ImageFilter_Color_FindPixelIdx(img_cropped_region, color_threshold_red, color_threshold_green, color_threshold_blue)
-    img_table_pixel_disable = ~img_target_pixel_index
 
 
     img_cropped_region_color= np.copy(img_cropped_region)
-    img_cropped_region_color[img_table_pixel_disable] = [0,0,0] #Boolean or “mask” index arrays
+    img_cropped_region_color[~img_target_pixel_index] = [0,0,0] #Boolean or “mask” index arrays
 
     # mark the targets
     img_marked_region_color= np.copy(img_cropped_region)
-    img_marked_region_color[~img_table_pixel_disable] = [255,0,0] #Boolean or “mask” index arrays
+    img_marked_region_color[img_target_pixel_index] = [255,0,0] #Boolean or “mask” index arrays
 
     # mark the targets on the full image
     img_marked_color= np.copy(image)
-    img_marked_color[~img_table_pixel_disable] = [255,0,0] #Boolean or “mask” index arrays
+    img_marked_color[img_target_pixel_index] = [255,0,0] #Boolean or “mask” index arrays
+
+    # mark the targets on the full image
+    img_colorFiltered= np.copy(image)
+    img_colorFiltered[~img_target_pixel_index] = [0,0,0] # only show the filtered color
 
     result = img_marked_color
+
+    # result = img_colorFiltered
+    return result
+
+
+def QH_process_image_HoughFilter(img):
+
+
+    img_gray = grayscale(img)
+
+    kernal_size = 5
+    img_gray_blur = gaussian_blur(img_gray, kernal_size)
+
+    img_gray_blur_canny = canny(img_gray_blur,60,160)
+
+    #plt.imshow(loc_img)
+
+    img_gray_blur_canny_crop = QH_ImageFilter_RegionCrop(img_gray_blur_canny)
+
+
+    rho = 2
+    theta = np.pi/180
+    vote_threshold = 10
+    min_line_len = 100
+    max_line_gap = 5
+    img_gray_blur_canny_crop_hough = hough_lines(img_gray_blur_canny_crop, rho, theta, vote_threshold, min_line_len, max_line_gap)
+
+    img_hough_3chnn = np.dstack((img_gray_blur_canny_crop_hough, np.zeros_like(img_gray_blur_canny_crop_hough), np.zeros_like(img_gray_blur_canny_crop_hough)))
+    result = weighted_img(img_hough_3chnn,img)
+
+    plt.imshow(result)
+
     return result
 
 def QH_process_image(image):
-  return QH_process_image_RegionColorFilter(image)
+  # return QH_process_image_RegionColorFilter(image)
+  return QH_process_image_HoughFilter(image)
 
 import os
 test_dir = "test_images/"
@@ -261,7 +303,7 @@ def process_image(image):
     # NOTE: The output you return should be a color image (3 channel) for processing video below
     # TODO: put your pipeline here,
     # you should return the final output (image with lines are drawn on lanes)
-    result = QH_process_image_RegionColorFilter(image)
+    result = QH_process_image(image)
     return result
 
 
