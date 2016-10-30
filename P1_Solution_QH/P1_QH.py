@@ -167,11 +167,30 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
 
 # In[19]:
 
-def PROTO_process_image(img):
 
-  result = img
+def Region_GenTriangleVertices(image):
+    img_num_of_row = image.shape[0]
+    img_num_of_col = image.shape[1]
+    img_size_x = img_num_of_col  
+    img_size_y = img_num_of_row
 
-  return result
+    tup_botm_right = (img_size_x, img_size_y)
+    tup_botm_left = (0,img_size_y)
+    tup_apex = (img_size_x/2, img_size_y/2)
+
+    vertices = np.array([[tup_botm_left,tup_apex, tup_botm_right]], dtype=np.int32)
+
+    return vertices
+
+
+def PROTO_process_image(image):
+
+    vertices = Region_GenTriangleVertices(image)
+    result = region_of_interest(image,vertices)
+
+    return result
+
+
 
 import os
 test_dir = "test_images/"
@@ -180,7 +199,7 @@ file_list = os.listdir(test_dir)
 for file in file_list:
     image = mpimg.imread( test_dir+file)
     img_processed = PROTO_process_image(image)
-    mpimg.imsave(test_dir+'result_'+file, img_processed )
+    mpimg.imsave('result_'+test_dir+'result_'+file, img_processed )
 
 
 
