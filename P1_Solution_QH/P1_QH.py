@@ -170,13 +170,16 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
 
 # @param apex_portion range : 0~1.0 the percentage of relative position of apex, e.g., 0.2 is at 0.2*x
 def QH_Region_GenTriangleVertices(image, apex_x_portion , apex_y_portion):
+
+    bottom_portion = 0.1
+
     img_num_of_row = image.shape[0]
     img_num_of_col = image.shape[1]
     img_size_x = img_num_of_col
     img_size_y = img_num_of_row
 
-    tup_botm_right = (img_size_x, img_size_y)
-    tup_botm_left = (0,img_size_y)
+    tup_botm_right = (img_size_x*(1-bottom_portion), img_size_y)
+    tup_botm_left = (img_size_x*bottom_portion,img_size_y)
     tup_apex = (img_size_x*apex_x_portion, img_size_y*apex_y_portion)
 
     vertices = np.array([[tup_botm_left,tup_apex, tup_botm_right]], dtype=np.int32)
@@ -196,7 +199,7 @@ def QH_ImageFilter_Color_FindPixelIdx(img, thres_red,thres_green,thres_blue):
 
 # @return image in numpy array of cropped region
 def QH_ImageFilter_RegionCrop(img):
-    vertices = QH_Region_GenTriangleVertices(img, 0.5, 0.4)
+    vertices = QH_Region_GenTriangleVertices(img, 0.5, 0.5)
     img_cropped_region = region_of_interest(img, vertices)
     return img_cropped_region
 
@@ -242,24 +245,29 @@ def QH_process_image_HoughFilter(img):
     kernal_size = 5
     img_gray_blur = gaussian_blur(img_gray, kernal_size)
 
-    img_gray_blur_canny = canny(img_gray_blur,60,160)
+    img_gray_blur_canny = canny(img_gray_blur,130,200)
 
     #plt.imshow(loc_img)
 
     img_gray_blur_canny_crop = QH_ImageFilter_RegionCrop(img_gray_blur_canny)
 
-
     rho = 2
     theta = np.pi/180
-    vote_threshold = 10
-    min_line_len = 100
+    vote_threshold = 50
+    min_line_len = 40
     max_line_gap = 5
     img_gray_blur_canny_crop_hough = hough_lines(img_gray_blur_canny_crop, rho, theta, vote_threshold, min_line_len, max_line_gap)
 
-    img_hough_3chnn = np.dstack((img_gray_blur_canny_crop_hough, np.zeros_like(img_gray_blur_canny_crop_hough), np.zeros_like(img_gray_blur_canny_crop_hough)))
-    result = weighted_img(img_hough_3chnn,img)
+    img_3chnn_hough_red = np.dstack((img_gray_blur_canny_crop_hough, np.zeros_like(img_gray_blur_canny_crop_hough), np.zeros_like(img_gray_blur_canny_crop_hough)))
 
-    plt.imshow(result)
+    img_3chnn_canny= np.dstack((img_gray_blur_canny, img_gray_blur_canny, img_gray_blur_canny))
+
+    plt.imshow(weighted_img(img_3chnn_hough_red, img_3chnn_canny))
+    plt.show()
+
+    result = weighted_img(img_3chnn_hough_red,img)
+
+    # plt.imshow(result)
 
     return result
 
