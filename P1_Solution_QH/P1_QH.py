@@ -242,18 +242,18 @@ def QH_process_image_HoughFilter(img):
 
     img_gray = grayscale(img)
 
-    kernal_size = 5
+    # higher size removes the false line from the car
+    kernal_size = 7 
     img_gray_blur = gaussian_blur(img_gray, kernal_size)
 
+    # higher threshold removes lines between road and dirt ground
     img_gray_blur_canny = canny(img_gray_blur,130,200)
-
-    #plt.imshow(loc_img)
 
     img_gray_blur_canny_crop = QH_ImageFilter_RegionCrop(img_gray_blur_canny)
 
     rho = 2
     theta = np.pi/180
-    vote_threshold = 50
+    vote_threshold = 20
     min_line_len = 40
     max_line_gap = 5
     img_gray_blur_canny_crop_hough = hough_lines(img_gray_blur_canny_crop, rho, theta, vote_threshold, min_line_len, max_line_gap)
