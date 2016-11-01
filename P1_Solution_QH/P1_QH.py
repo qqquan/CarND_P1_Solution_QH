@@ -44,6 +44,7 @@ import cv2
 get_ipython().magic('matplotlib inline')
 
 
+
 # In[17]:
 
 #reading in an image
@@ -111,7 +112,7 @@ def region_of_interest(img, vertices):
     return masked_image
 
 
-def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
+def draw_lines(img, lines, color=[230, 230, 0], thickness=8):
     """
     NOTE: this is the function you might want to use as a starting point once you want to
     average/extrapolate the line segments you detect to map out the full
@@ -128,9 +129,49 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     If you want to make the lines semi-transparent, think about combining
     this function with the weighted_img() function below
     """
+    # for line in lines:
+    #     for x1,y1,x2,y2 in line:
+    #         # find to the furthest point of the identified lines
+    #         y_top = min(y1,y2)
+    img_size_x = img.shape[1]
+    img_size_y = img.shape[0]
+
+    y_top = img_size_y*0.6
+    # extend the line to the image bottom
+    y_bottom = img_size_y
+    # extrapolate for bottom x
+    # xx = ((Xh - Xl)/(Yh-Yl) )*(yy - Yh) +  Xh
     for line in lines:
         for x1,y1,x2,y2 in line:
-            cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+            if y2 < y1:
+                # (x2, y2) is a higher point
+                Yh = y2
+                Xh = x2
+                Yl = y1
+                Xl = x1
+            else:
+                Yh = y1
+                Xh = x1
+                Yl = y2
+                Xl = x2
+
+
+
+            if Yh == Yl:
+                # divide by zero condition
+                # TODO: horizontal lines causes error in extra.mp4 at 45th of 251 frame
+                # print('error', 'y1= ',y2,' y2 =',y1)
+                x_top = x1
+                x_bottom = x2
+                y_top = y1
+                y_bottom = y2
+            else:
+                x_top = ((Xh - Xl)/(Yh-Yl) )*(y_top - Yh) +  Xh
+                x_bottom = ((Xh - Xl)/(Yh-Yl) )*(y_bottom - Yh) +  Xh
+
+            # ignore curve  condition
+            if (x_top > 0) and (x_top < img_size_x) and (x_bottom > 0) and (x_bottom<img_size_x):
+                cv2.line(img, (int(x_top), int(y_top)), (int(x_bottom), int(y_bottom)), color, thickness)
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
@@ -138,6 +179,9 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
 
     Returns an image with hough lines drawn.
     """
+
+    # lines – Output vector of lines. Each line is represented by a 4-element vector (x_1, y_1, x_2, y_2) ,
+    #         where  (x_1,y_1) and  (x_2, y_2) are the ending points of each detected line segment.
     lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
     line_img = np.zeros(img.shape, dtype=np.uint8)
     draw_lines(line_img, lines)
@@ -166,7 +210,7 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
 # **You should make sure your pipeline works well on these images before you try the videos.**
 
 # In[19]:
-
+DEBUG_SWITCH = 1
 
 # @param apex_portion range : 0~1.0 the percentage of relative position of apex, e.g., 0.2 is at 0.2*x
 def QH_Region_GenTriangleVertices(image, apex_x_portion , apex_y_portion):
@@ -209,6 +253,7 @@ def QH_process_image_RegionColorFilter(image):
 
     img_cropped_region = QH_ImageFilter_RegionCrop(image)
 
+
     color_threshold_red = 160
     color_threshold_green = 160
     color_threshold_blue = 0
@@ -243,13 +288,18 @@ def QH_process_image_HoughFilter(img):
     img_gray = grayscale(img)
 
     # higher size removes the false line from the car
-    kernal_size = 7 
+    kernal_size = 7
     img_gray_blur = gaussian_blur(img_gray, kernal_size)
 
     # higher threshold removes lines between road and dirt ground
     img_gray_blur_canny = canny(img_gray_blur,130,200)
 
     img_gray_blur_canny_crop = QH_ImageFilter_RegionCrop(img_gray_blur_canny)
+
+
+    if DEBUG_SWITCH:
+        plt.imshow(img_gray_blur_canny_crop, cmap='gray')
+        plt.show()
 
     rho = 2
     theta = np.pi/180
@@ -262,8 +312,9 @@ def QH_process_image_HoughFilter(img):
 
     img_3chnn_canny= np.dstack((img_gray_blur_canny, img_gray_blur_canny, img_gray_blur_canny))
 
-    plt.imshow(weighted_img(img_3chnn_hough_red, img_3chnn_canny))
-    plt.show()
+    if DEBUG_SWITCH:
+        plt.imshow(weighted_img(img_3chnn_hough_red, img_3chnn_canny))
+        plt.show()
 
     result = weighted_img(img_3chnn_hough_red,img)
 
@@ -318,6 +369,7 @@ def process_image(image):
 # Let's try the one with the solid white lane on the right first ...
 
 # In[22]:
+DEBUG_SWITCH = 0
 
 white_output = 'white.mp4'
 clip1 = VideoFileClip("solidWhiteRight.mp4")
