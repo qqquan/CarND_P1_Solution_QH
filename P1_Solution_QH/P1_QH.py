@@ -365,6 +365,9 @@ import os
 test_dir = "test_images/"
 file_list = os.listdir(test_dir)
 
+if not os.path.exists('result_'+test_dir):
+    os.makedirs('result_'+test_dir)
+
 for file in file_list:
     image = mpimg.imread( test_dir+file)
     img_processed = QH_process_image(image)
