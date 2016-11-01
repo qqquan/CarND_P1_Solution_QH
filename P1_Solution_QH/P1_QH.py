@@ -112,7 +112,7 @@ def region_of_interest(img, vertices):
     return masked_image
 
 
-def draw_lines(img, lines, color=[230, 230, 0], thickness=8):
+def draw_lines(img, lines, color=[244, 175, 26], thickness=10):
     """
     NOTE: this is the function you might want to use as a starting point once you want to
     average/extrapolate the line segments you detect to map out the full
@@ -129,20 +129,55 @@ def draw_lines(img, lines, color=[230, 230, 0], thickness=8):
     If you want to make the lines semi-transparent, think about combining
     this function with the weighted_img() function below
     """
-    # for line in lines:
-    #     for x1,y1,x2,y2 in line:
-    #         # find to the furthest point of the identified lines
-    #         y_top = min(y1,y2)
+
     img_size_x = img.shape[1]
     img_size_y = img.shape[0]
 
     y_top = img_size_y*0.6
     # extend the line to the image bottom
     y_bottom = img_size_y
+
+    # average for left and right lane mark
+    #in case there is missing line detection
+    line_avg_left = np.array([0,0,0,0])
+    line_avg_right = np.array([0,0,0,0])
+    #initialize lines_avg
+    line_avg_left_initialized = 0
+    line_avg_right_initialized = 0
+    for line in lines:
+
+        for x1,y1,x2,y2 in line:
+            # calc slope. positive result means left lane mark
+            if (y2-y1)/(x2 - x1) >0 :
+                # [a + b for a, b in zip(list1, list2)]
+                #TODO: Debug error from not any(line_avg_left)
+                #TODO: is line an array instead of list?
+                if not line_avg_left_initialized:
+                    line_avg_left_initialized = 1
+                    line_avg_left = np.array(line)
+                else:
+                    line_avg_left  = [ (new_value + avg_value)//2 for new_value, avg_value in zip(line, line_avg_left)]
+            else:
+                if not line_avg_right_initialized:
+                    line_avg_right_initialized = 1
+                    line_avg_right = np.array(line)
+                else:
+                    line_avg_right  = [ (new_value + avg_value)//2 for new_value, avg_value in zip(line, line_avg_right)]
+
+
+    #ignore undetected side lines
+    lines_averged = [line_avg_left, line_avg_right]
+    if not line_avg_left_initialized:
+        lines_averged = [line_avg_right]
+    if not line_avg_right_initialized:
+        lines_averged = [line_avg_left]
+
+
     # extrapolate for bottom x
     # xx = ((Xh - Xl)/(Yh-Yl) )*(yy - Yh) +  Xh
-    for line in lines:
-        for x1,y1,x2,y2 in line:
+    for avg_line in lines_averged:
+        for x1,y1,x2,y2 in avg_line:
+
             if y2 < y1:
                 # (x2, y2) is a higher point
                 Yh = y2
@@ -155,10 +190,8 @@ def draw_lines(img, lines, color=[230, 230, 0], thickness=8):
                 Yl = y2
                 Xl = x2
 
-
-
+            # divide by zero condition
             if Yh == Yl:
-                # divide by zero condition
                 # TODO: horizontal lines causes error in extra.mp4 at 45th of 251 frame
                 # print('error', 'y1= ',y2,' y2 =',y1)
                 x_top = x1
@@ -172,6 +205,8 @@ def draw_lines(img, lines, color=[230, 230, 0], thickness=8):
             # ignore curve  condition
             if (x_top > 0) and (x_top < img_size_x) and (x_bottom > 0) and (x_bottom<img_size_x):
                 cv2.line(img, (int(x_top), int(y_top)), (int(x_bottom), int(y_bottom)), color, thickness)
+
+
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
